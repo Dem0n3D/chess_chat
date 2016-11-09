@@ -2,6 +2,8 @@ import sys
 import socket
 import select
 
+from board import Board
+
 HOST = ''
 SOCKET_LIST = []
 RECV_BUFFER = 4096
@@ -19,6 +21,8 @@ def chat_server():
 
     print("Chat server started on port " + str(PORT))
 
+    board = Board()
+
     while 1:
 
         # get the list sockets which are ready to be read through select
@@ -31,6 +35,8 @@ def chat_server():
                 sockfd, addr = server_socket.accept()
                 SOCKET_LIST.append(sockfd)
                 print("Client (%s, %s) connected" % addr)
+
+                sockfd.send(str(board).encode("utf-8"))
 
                 broadcast(server_socket, sockfd, "[%s:%s] entered our chatting room\n" % addr)
 
