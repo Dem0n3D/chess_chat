@@ -1,3 +1,4 @@
+import re
 import sys
 import socket
 import select
@@ -22,6 +23,8 @@ def chat_server():
     print("Chat server started on port " + str(PORT))
 
     board = Board()
+
+    votes = {}
 
     while 1:
 
@@ -49,8 +52,22 @@ def chat_server():
                     if data:
                         s = data.decode("utf-8")
                         print("\r" + '[' + str(sock.getpeername()) + '] ' + s)
-                        # there is something in the socket
-                        broadcast(server_socket, sock, "\r" + '[' + str(sock.getpeername()) + '] ' + s)
+
+                        if(re.match("[a-h][1-8]-[a-h][1-8]", s.lower())):
+                            s = s.lower().strip()
+                            if(s in votes):
+                                votes[s] += 1
+                            else:
+                                votes[s] = 1
+
+                            broadcast(server_socket, sock, "\r" + '[' + str(sock.getpeername()) + '] ' + str(votes) + "\n")
+
+                            if(sum(votes.values()) >= 4):
+                                board.turn(votes)
+                                broadcast(server_socket, sock, str(board))
+                                votes = {}
+                        else:
+                            broadcast(server_socket, sock, "\r" + '[' + str(sock.getpeername()) + '] ' + s)
                     else:
                         # remove the socket that's broken
                         if sock in SOCKET_LIST:
@@ -60,7 +77,8 @@ def chat_server():
                         broadcast(server_socket, sock, "Client (%s, %s) is offline\n" % addr)
 
                         # exception
-                except:
+                except Exception as e:
+                    print(e)
                     broadcast(server_socket, sock, "Client (%s, %s) is offline\n" % addr)
                     continue
 
@@ -71,7 +89,7 @@ def chat_server():
 def broadcast(server_socket, sock, message):
     for socket in SOCKET_LIST:
         # send the message only to peer
-        if socket != server_socket and socket != sock:
+        if socket != server_socket:
             try:
                 socket.send(message.encode("utf-8"))
             except:
